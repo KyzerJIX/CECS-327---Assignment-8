@@ -14,7 +14,7 @@ LITERS_TO_GALLONS = 0.264172
 METADATA = {
     "House A": {
         "moisture_key":    "Moisture Meter1",
-        "water_key":       "Flame Sensor Module1",
+        "water_key":       "Water Consumption Sensor1",
         "electricity_keys": ["Ammeter 1", "Ammeter2", "Ammeter"],
     },
     "House B": {
