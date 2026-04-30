@@ -6,7 +6,7 @@ QUERY_3 = "Which house consumed more electricity in the past 24 hours, and by ho
 
 SUPPORTED_QUERIES = [QUERY_1, QUERY_2, QUERY_3]
 
-host = input("Enter server IP: ").strip()
+host = input("Enter server IP (use localhost): ").strip()
 port = int(input("Enter server port: "))
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
