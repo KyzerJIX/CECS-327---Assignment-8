@@ -1,5 +1,6 @@
 import socket
 
+# Questions needed for assignment
 QUERY_1 = "What is the average moisture inside our kitchen fridges in the past hours, week and month?"
 QUERY_2 = "What is the average water consumption per cycle across our smart dishwashers in the past hour, week and month?"
 QUERY_3 = "Which house consumed more electricity in the past 24 hours, and by how much?"
