@@ -2,36 +2,31 @@ import socket
 import psycopg
 from datetime import datetime, timezone, timedelta
 
-# Configuration 
-
+ 
+# Connect to the database
 DATABASE_URL = "postgresql://neondb_owner:npg_DHWhPtFO5Gj3@ep-royal-smoke-a4yxy7nt-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 PST = timezone(timedelta(hours=-8))
-LITERS_TO_GALLONS = 0.264172
+LITERS_TO_GALLONS = 0.264172 # Conversion to gallons
 
-# DataNiz device metadata — sensor keys distinguish House A vs House B
-# electricity_keys is a list covering all ammeter devices per house
+# House A and House B
 METADATA = {
     "House A": {
         "moisture_key":    "Moisture Meter1",
         "water_key":       "Water Consumption Sensor1",
         "electricity_keys": ["Ammeter 1", "Ammeter2", "Ammeter"],
-    },
+    }, # Nguyen Pham data
     "House B": {
         "moisture_key":    "Moisture Meter for Fridge2",
         "water_key":       "Water consumption sensor",
         "electricity_keys": ["Ammeter for Fridge2", "Ammeter for DishWasher", "Ammeter for Fridge"],
-    },
-}
+    }, # Truong Bui-Phan data
 
 QUERY_1 = "What is the average moisture inside our kitchen fridges in the past hours, week and month?"
 QUERY_2 = "What is the average water consumption per cycle across our smart dishwashers in the past hour, week and month?"
 QUERY_3 = "Which house consumed more electricity in the past 24 hours, and by how much?"
 
 
-# ── Sorted Time-Series Data Structure 
-# Keeps (timestamp, value, house) records sorted by timestamp via binary search.
-# Used to correctly merge and order readings from both houses.
 
 class SortedTimeSeries:
     def __init__(self):
@@ -53,10 +48,10 @@ class SortedTimeSeries:
         return [r[1] for r in self._records if r[2] == house]
 
 
-#  Database Fetch Helpers 
 
+
+# Fetch sensor data for a time range.
 def fetch_rows(cur, key, interval):
-    """Fetch (createdAt, value) for a single sensor key within a time interval."""
     cur.execute("""
         SELECT "createdAt", (payload->>%s)::float
         FROM "MyIoTData_virtual"
@@ -66,13 +61,8 @@ def fetch_rows(cur, key, interval):
     return cur.fetchall()
 
 
-# Build Series — Single Key 
-
+# Build time series for both houses. 
 def build_series(cur, key_type, interval):
-    """
-    Build a SortedTimeSeries for a single-key sensor type (moisture, water).
-    House A and House B are distinguished by their unique sensor key names.
-    """
     series = SortedTimeSeries()
     for house, meta in METADATA.items():
         for ts, val in fetch_rows(cur, meta[key_type], interval):
@@ -81,14 +71,8 @@ def build_series(cur, key_type, interval):
     return series
 
 
-# Build Series — Multiple Electricity Keys 
-
+# Build electricity data by house
 def build_electricity_series(cur, interval):
-    """
-    Build a SortedTimeSeries summing all ammeter devices per house.
-    Each house has 3 ammeter keys; all are fetched and tagged by house,
-    so values_by_house() returns combined readings across all 3 devices.
-    """
     series = SortedTimeSeries()
     for house, meta in METADATA.items():
         for key in meta["electricity_keys"]:
@@ -115,7 +99,6 @@ def handle_query(message):
 
             if message == QUERY_1:
                 # Moisture: reported per house as % relative humidity
-                # % RH requires no imperial conversion
                 windows = [
                     ("Past hour",  "1 hour"),
                     ("Past week",  "7 days"),
@@ -157,7 +140,6 @@ def handle_query(message):
                 # Electricity: sum all 3 ammeter devices per house, then compare
                 # House A devices: Ammeter 1, Ammeter2, Ammeter
                 # House B devices: Ammeter for Fridge2, Ammeter for DishWasher, Ammeter for Fridge
-                # Assumption: Ammeter values in Amps at 120V US residential
                 series = build_electricity_series(cur, "24 hours")
 
                 total_a = sum(series.values_by_house("House A")) or 0.0
